@@ -1,0 +1,116 @@
+# ============================================
+# ChatTutor Docker Compose
+# Services: PostgreSQL, Client (API), Web (Frontend)
+# Note: .env file should be placed in project root
+# ============================================
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: chattutor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chattutor
+      POSTGRES_USER: chattutor
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chattutor -d chattutor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chattutor-network
+
+  # Database Migration (run once for initial setup)
+  db-migrate:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.db-migrate
+    container_name: chattutor-db-migrate
+    environment:
+      DATABASE_URL: postgresql://chattutor:${POSTGRES_PASSWORD:-changeme}@postgres:5432/chattutor
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - chattutor-network
+    profiles:
+      - init
+
+  # Client - API Server (Bun + Elysia)
+  client:
+    build:
+      context: ..
+      dockerfile: packages/client/Dockerfile
+    container_name: chattutor-client
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://chattutor:${POSTGRES_PASSWORD:-changeme}@postgres:5432/chattutor
+      
+      # AI Configuration
+      MODEL_API_KEY: ${MODEL_API_KEY}
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-https://api.openai.com/v1}
+      AGENT_MODEL: ${AGENT_MODEL:-gpt-4}
+      AGENT_MODEL_PROVIDER: ${AGENT_MODEL_PROVIDER:-}
+      TITLE_MODEL: ${TITLE_MODEL:-}
+      TITLE_MODEL_PROVIDER: ${TITLE_MODEL_PROVIDER:-}
+      
+      # OSS Configuration (Optional)
+      OSS_ENDPOINT: ${OSS_ENDPOINT:-}
+      OSS_ACCESS_KEY: ${OSS_ACCESS_KEY:-}
+      OSS_SECRET_KEY: ${OSS_SECRET_KEY:-}
+      OSS_BUCKET: ${OSS_BUCKET:-}
+      OSS_REGION: ${OSS_REGION:-}
+      
+      # Runtime
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "--eval", "fetch('http://localhost:8002').then(() => process.exit(0)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 10s
+      retries: 3
+    networks:
+      - chattutor-network
+
+  # Web - Frontend (Vue.js + Nginx)
+  web:
+    build:
+      context: ..
+      dockerfile: packages/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8002}
+    container_name: chattutor-web
+    restart: unless-stopped
+    ports:
+      - "8001:80"
+    depends_on:
+      client:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 5s
+      retries: 3
+    networks:
+      - chattutor-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  chattutor-network:
+    driver: bridge

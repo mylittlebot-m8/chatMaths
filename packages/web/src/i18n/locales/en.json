@@ -1,0 +1,105 @@
+{
+  "common": {
+    "chatTutor": "ChatTutor",
+    "newChat": "New Chat",
+    "recent": "Recent",
+    "empty": "No content yet",
+    "desc": "Intelligent conversational teaching assistant",
+    "backHome": "Back to Home"
+  },
+  "home": {
+    "greeting": {
+      "morning": "morning",
+      "afternoon": "afternoon",
+      "evening": "evening"
+    },
+    "title": "Good {time}, Let's start!"
+  },
+  "settings": {
+    "title": "Settings",
+    "models": {
+      "title": "Models",
+      "baseURL": "Base URL",
+      "apiKey": "API Key",
+      "apiKeyDescription": "The information is stored in your browser's local storage.",
+      "agentModel": "Agent Model",
+      "titleModel": "Title Model",
+      "titleModelDescription": "Optional, default to the same as Agent Model.",
+      "provider": "Provider"
+    },
+    "interface": {
+      "title": "Interface",
+      "colorMode": "Color Mode",
+      "language": "Language",
+      "colorModeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "Follow system"
+      },
+      "languageOptions": {
+        "en": "English",
+        "zh": "Simplified Chinese (简体中文)"
+      }
+    },
+    "alert": {
+      "keyRequired": "Model API Key has not been configured yet",
+      "pleaseSetKey": "Please set your own API key and models in the settings before use."
+    }
+  },
+  "message": {
+    "types": {
+      "mermaid": {
+        "running": "Creating diagram...",
+        "completed": "Diagram created"
+      },
+      "note": {
+        "running": "Creating note...",
+        "completed": "Note created"
+      },
+      "ggb": {
+        "running": "Creating GeoGebra...",
+        "completed": "GeoGebra created"
+      },
+      "page": {
+        "created": "Created page: {title}"
+      },
+      "plan": {
+        "running": "Planning...",
+        "completed": "Plan completed"
+      },
+      "error": {
+        "prefix": "Error: {message}"
+      }
+    }
+  },
+  "mermaid": {
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "reset": "Reset",
+    "fitToScreen": "Fit To Screen",
+    "actionTip": "Drag to move {'|'} Scroll to zoom"
+  },
+  "chat": {
+    "notes": "Notes",
+    "noNotes": "No notes yet",
+    "send": "Send",
+    "stop": "Stop",
+    "placeholder": "Type your message here...",
+    "uploadImage": "Upload Image",
+    "avatarLoading": "AI Tutor Preparing"
+  },
+  "error": {
+    "404": {
+      "title": "Page Not Found",
+      "message": "Sorry, the page you are looking for does not exist."
+    },
+    "error": {
+      "title": "Error",
+      "message": "An unexpected error has occurred."
+    },
+    "chat": {
+      "title": "Failed to Load Chat",
+      "message": "An error occurred while loading the chat."
+    }
+  }
+}

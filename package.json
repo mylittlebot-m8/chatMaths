@@ -1,0 +1,32 @@
+{
+  "name": "@chat-tutor/monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ChatTutor Monorepo",
+  "scripts": {
+    "test": "vitest",
+    "lint": "eslint . --fix",
+    "dev": "pnpm --filter @chat-tutor/*  --parallel dev",
+    "client:dev": "pnpm --filter @chat-tutor/client dev",
+    "web:dev": "pnpm --filter @chat-tutor/web dev",
+    "build": "pnpm --filter @chat-tutor/* build",
+    "client:build": "pnpm --filter @chat-tutor/client build",
+    "web:build": "pnpm --filter @chat-tutor/web build",
+    "db:push": "pnpm --filter @chat-tutor/db push",
+    "db:generate": "pnpm --filter @chat-tutor/db generate",
+    "db:studio": "pnpm --filter @chat-tutor/db studio",
+    "client:start": "pnpm --filter @chat-tutor/client start",
+    "web:start": "pnpm --filter @chat-tutor/web preview"
+  },
+  "packageManager": "pnpm@10.14.0",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "eslint-plugin-vue": "^10.6.2",
+    "typescript-eslint": "^8.50.1",
+    "vitest": "^4.0.16",
+    "vue-eslint-parser": "^10.2.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.2"
+  }
+}

@@ -2,10 +2,14 @@
 import { client } from '#/utils/client'
 import { SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, Spinner } from '@chat-tutor/ui'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 
 const { t } = useI18n()
+const route = useRoute()
+const userUuid = computed(() => route.query.uuid as string || '')
+const chatType = computed(() => route.query.type as string || '')
 
 interface Item {
   title: string
@@ -21,11 +25,12 @@ const fetchItems = async () => {
     return
   }
   fetching.value = true
+  const queryParams: any = { limit: 15, offset: 0 }
+  if (userUuid.value) queryParams.userId = userUuid.value
+  if (chatType.value) queryParams.type = chatType.value
+  
   const { data, error } = await client.chat.get({
-    query: {
-      limit: 15,
-      offset: 0,
-    }
+    query: queryParams
   })
   if (error || !data) {
     return

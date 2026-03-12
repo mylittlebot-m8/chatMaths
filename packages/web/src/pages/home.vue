@@ -4,7 +4,7 @@ import { PromptArea } from '#/components/prompt-area'
 import { type Resource } from '@chat-tutor/shared'
 import { client } from '#/utils/client'
 import { useCreateChatStore } from '#/utils/stores'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
   Alert,
@@ -26,8 +26,12 @@ const router = useRouter()
 const { t } = useI18n()
 
 const handleSend = async (message: string, attachments: Resource[]) => {
+  const storedUuid = localStorage.getItem('userUuid') || ''
+  const storedType = localStorage.getItem('chatType') || ''
   const { data, error } = await client.chat.post({
     input: message,
+    userId: storedUuid,
+    type: storedType,
   })
   if (error) {
     return
@@ -53,6 +57,19 @@ const greeting = computed(() => {
 const { isMobile } = useSidebar()
 
 const settings = useSettingsStore()
+const route = useRoute()
+const userUuid = computed(() => route.query.uuid as string || '')
+
+// 将 uuid 存储到 localStorage
+if (userUuid.value) {
+  localStorage.setItem('userUuid', userUuid.value)
+}
+
+// type 参数
+const typeParam = computed(() => route.query.type as string || '')
+if (typeParam.value) {
+  localStorage.setItem('chatType', typeParam.value)
+}
 
 const showSettingsAlert = computed(() => {
   return (import.meta.env.VITE_USER_KEY_REQUIRED === 'true') && (!settings.apiKey)

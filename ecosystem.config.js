@@ -19,6 +19,7 @@ module.exports = {
                 AGENT_MODEL_PROVIDER: 'qwen',
                 TITLE_MODEL: 'qwen3.5-397b-a17b',
                 TITLE_MODEL_PROVIDER: 'qwen',
+                VISION_MODEL: 'qwen3-vl-plus-2025-12-19',
                 OSS_ENDPOINT: process.env.OSS_ENDPOINT || 'https://oss-cn-beijing.aliyuncs.com',
                 OSS_ACCESS_KEY: process.env.OSS_ACCESS_KEY || '',
                 OSS_SECRET_KEY: process.env.OSS_SECRET_KEY || '',

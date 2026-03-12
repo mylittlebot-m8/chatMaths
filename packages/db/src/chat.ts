@@ -15,6 +15,8 @@ export const chat = pgTable('chat', {
   ),
 
   status: text('status').notNull().default('pending'),
+  userId: text('user_id'),
+  type: text('type').default('days'),
   
   // 向量数据
   textEmbedding: text('text_embedding'),

@@ -13,10 +13,12 @@ export const chat = new Elysia({ prefix: '/chat' })
     return await getChats(
       Number(query.limit) ?? 10,
       Number(query.offset) ?? 0,
+      query.userId,
+      query.type,
     )
   }, GetModel)
   .post('/', async ({ body }) => {
-    const id = await createChat(body.input)
+    const id = await createChat(body.input, body.userId, body.type)
     return {
       id
     }

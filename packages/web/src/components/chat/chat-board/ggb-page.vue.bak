@@ -23,7 +23,7 @@ onAction((action) => {
     content
       .split('\n')
       .filter((line) => !line.trim().startsWith('#') && line.trim() !== '')
-      .filter(line => !line.includes("Text(") && !line.trim().startsWith("Text")).map(line => line.replace(/90 deg/g, "90°")).forEach(apiRef.value?.evalCommand)
+      .forEach(apiRef.value?.evalCommand)
     return true
   }
   return false
@@ -86,7 +86,7 @@ watch([apiRef], ([api]) => {
       content
         .split('\n')
         .filter((line) => !line.trim().startsWith('#') && line.trim() !== '')
-        .map(line => line.replace(/90 deg/g, "90°")).forEach(api.evalCommand)
+        .forEach(api.evalCommand)
     }
   }
 })

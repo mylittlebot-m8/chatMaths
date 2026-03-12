@@ -2,6 +2,7 @@ import './load-env'
 import { Elysia, t } from 'elysia'
 import { chat } from './modules/chat'
 import { resource } from './modules/resource'
+import { external } from './modules/external'
 import { corsMiddleware } from './middlewares/cors'
 import { globalErrorHandler } from './middlewares/error-handler'
 import { readFileSync } from 'fs'
@@ -12,6 +13,7 @@ export const app = new Elysia()
   .use(globalErrorHandler)
   .use(chat)
   .use(resource)
+  .use(external)
   .get('/videos/:filename', ({ params }) => {
     const filePath = join('/tmp/avatar-videos', params.filename)
     try {

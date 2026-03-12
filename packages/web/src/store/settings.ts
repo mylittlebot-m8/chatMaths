@@ -39,6 +39,7 @@ export const useSettingsStore = defineStore('settings', () => {
   const baseURL = ref(localStorage.getItem('baseURL') || '')
   const apiKey = ref(localStorage.getItem('apiKey') || '')
   const agentModel = ref(localStorage.getItem('agentModel') || '')
+  const visionModel = ref(localStorage.getItem('visionModel') || '')
   const titleModel = ref(localStorage.getItem('titleModel') || '')
   const language = ref(
     localStorage.getItem('language') || (preferZh.value ? 'zh' : 'en')
@@ -62,6 +63,7 @@ export const useSettingsStore = defineStore('settings', () => {
     persist('baseURL', baseURL.value)
     persist('apiKey', apiKey.value)
     persist('agentModel', agentModel.value)
+    persist('visionModel', visionModel.value)
     persist('titleModel', titleModel.value)
     persist('colorMode', colorMode.value)
     persist('modelProvider', modelProvider.value)
@@ -73,6 +75,7 @@ export const useSettingsStore = defineStore('settings', () => {
       baseURL,
       apiKey,
       agentModel,
+      visionModel,
       titleModel,
       colorMode,
       modelProvider,
@@ -103,6 +106,7 @@ export const useSettingsStore = defineStore('settings', () => {
     baseURL,
     apiKey,
     agentModel,
+    visionModel,
     titleModel,
     colorMode,
     isDarkMode,

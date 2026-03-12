@@ -22,8 +22,12 @@ export const createGateway = ({ apiKey, baseURL, provider = 'openai' }: GatewayO
     baseURL,
   })
 
-  return (modelId: string) => {
+  return (modelId: string, options?: { vision?: boolean }) => {
     if (provider === 'openai' || provider === 'qwen') {
+      // 多模态支持
+      if (options?.vision) {
+        return (providerInstance as any).chat(modelId, { vision: { support: true } })
+      }
       return (providerInstance as any).chat(modelId)
     }
     return (providerInstance as any)(modelId)

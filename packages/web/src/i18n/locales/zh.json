@@ -25,7 +25,9 @@
       "agentModel": "Agent 模型",
       "titleModel": "标题模型",
       "titleModelDescription": "可选，默认与 Agent 模型相同。",
-      "provider": "提供商"
+      "provider": "提供商",
+      "visionModel": "多模态模型",
+      "visionModelDescription": "用于图片识别和理解，默认与 Agent 模型相同"
     },
     "interface": {
       "title": "用户界面",

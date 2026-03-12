@@ -8,7 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faRobot, faWindowMaximize } from '@fortawesome/free-solid-svg-icons'
 import { modelProviders } from '#/store/settings'
 const settingsStore = useSettingsStore()
-const { baseURL, apiKey, agentModel, titleModel, colorMode, modelProvider, modelProviderDetails, language } = storeToRefs(settingsStore)
+const { baseURL, apiKey, agentModel, visionModel, titleModel, colorMode, modelProvider, modelProviderDetails, language } = storeToRefs(settingsStore)
 
 const { t, availableLocales } = useI18n()
 
@@ -79,6 +79,13 @@ const sectionTitleClass = 'font-semibold text-muted-foreground border-b pt-3 pb-
           :label="t('settings.models.titleModel')"
           :placeholder="agentModel"
           :description="t('settings.models.titleModelDescription')"
+        />
+
+        <SettingsItem
+          v-model="visionModel"
+          :label="t('settings.models.visionModel')"
+          :placeholder="agentModel"
+          :description="t('settings.models.visionModelDescription')"
         />
       </section>
 

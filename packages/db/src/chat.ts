@@ -15,4 +15,10 @@ export const chat = pgTable('chat', {
   ),
 
   status: text('status').notNull().default('pending'),
+  
+  // 向量数据
+  textEmbedding: text('text_embedding'),
+  solveEmbedding: text('slove_embedding'),
+  concept: text('concept'),
+  conceptEmbedding: text('concept_embedding'),
 })

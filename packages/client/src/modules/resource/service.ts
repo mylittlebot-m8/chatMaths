@@ -6,16 +6,15 @@ type UploadImageBody = z.infer<typeof PostImageModel.body>
 
 export const uploadImage = async (body: UploadImageBody) => {
   const client = new S3Client({
-    region:
-      !process.env.OSS_REGION || process.env.OSS_REGION === ''
-        ? 'default'
-        : process.env.OSS_REGION,
-    endpoint: process.env.OSS_ENDPOINT,
+    // 阿里云 OSS 使用 virtual hosted style
+    
+    region: process.env.OSS_REGION || 'oss-cn-beijing',
+    endpoint: process.env.OSS_ENDPOINT || 'https://oss-cn-beijing.aliyuncs.com',
     credentials: {
       accessKeyId: process.env.OSS_ACCESS_KEY!,
       secretAccessKey: process.env.OSS_SECRET_KEY!,
     },
-    forcePathStyle: true,
+    forcePathStyle: false,
   })
 
   const file = body.file
@@ -41,7 +40,7 @@ export const uploadImage = async (body: UploadImageBody) => {
 
   await client.send(command)
 
-  const publicUrl = `${process.env.OSS_ENDPOINT}/${process.env.OSS_BUCKET}/${key}`
+  const publicUrl = `https://${process.env.OSS_BUCKET || 'aiguodu'}.${(process.env.OSS_ENDPOINT || 'https://oss-cn-beijing.aliyuncs.com').replace('https://', '')}/${key}`
 
   return {
     success: true,

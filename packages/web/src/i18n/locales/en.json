@@ -25,7 +25,9 @@
       "agentModel": "Agent Model",
       "titleModel": "Title Model",
       "titleModelDescription": "Optional, default to the same as Agent Model.",
-      "provider": "Provider"
+      "provider": "Provider",
+      "visionModel": "Vision Model",
+      "visionModelDescription": "For image understanding, defaults to Agent model if empty"
     },
     "interface": {
       "title": "Interface",

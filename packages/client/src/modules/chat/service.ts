@@ -6,6 +6,7 @@ import { AgentProvider, createAgent, getTitle } from '@chat-tutor/agent'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { ModelMessage } from 'ai'
 import { AgentConfigError, ChatIsRunningError } from './error'
+import { generateQuestionVectors } from '../../utils/embedding'
 
 export const getChats = async (limit: number, offset: number) => {
   try {
@@ -386,6 +387,36 @@ export const createChatStream = () => {
           // Final flush
           if (segmentBuffer.length > 0) {
             triggerVideoGen(segmentBuffer)
+          }
+
+          // 多模态题目识别和向量化
+          // 从 AI 响应中提取 <problem> 标签内容
+          const fullResponse = messages.map(m => m.content).join('')
+          const problemMatch = fullResponse.match(/<problem>([\s\S]*?)<\/problem>/)
+          const extractedProblem = problemMatch ? problemMatch[1].trim() : input.options.prompt
+          
+          // 提取解题内容（去除 plan 标签）
+          const solveContent = fullResponse.replace(/<plan>[\s\S]*?<\/plan>/g, '').trim()
+          
+          // 如果有图片资源（多模态输入），生成向量
+          if (input.options.resources && input.options.resources.length > 0) {
+            try {
+              console.log('[Vector] Generating vectors for multimodal input...')
+              const vectors = await generateQuestionVectors(extractedProblem, solveContent)
+              console.log('[Vector] Vectors generated, concept:', vectors.concept)
+              
+              // 更新数据库
+              await db.update(chat).set({
+                text_embedding: vectors.textEmbedding ? JSON.stringify(vectors.textEmbedding) : null,
+                slove_embedding: vectors.solveEmbedding ? JSON.stringify(vectors.solveEmbedding) : null,
+                concept: vectors.concept,
+                concept_embedding: vectors.conceptEmbedding ? JSON.stringify(vectors.conceptEmbedding) : null,
+              }).where(eq(chat.id, id))
+              
+              console.log('[Vector] Vectors saved to database')
+            } catch (err) {
+              console.error('[Vector] Error generating vectors:', err)
+            }
           }
 
           await updateChatRecord({

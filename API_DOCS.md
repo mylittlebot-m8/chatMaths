@@ -118,7 +118,84 @@ curl "http://117.50.196.232:8002/external/search?key=方程&limit=5"
 
 ---
 
-### 3. 健康检查
+### 3. 获取用户题目列表
+
+获取指定用户的所有错题列表。
+
+**接口**: `GET /external/questions`
+
+**参数**:
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| uuid | 否 | 用户ID，不传则获取所有用户 |
+| typ | 否 | 题目类型 (error/test/example) |
+| limit | 否 | 返回数量，默认10 |
+| offset | 否 | 偏移量，默认0 |
+
+**示例**:
+```bash
+# 获取用户test2的所有错题
+curl "http://117.50.196.232:8002/external/questions?uuid=test2"
+
+# 获取所有用户的error类型题目
+curl "http://117.50.196.232:8002/external/questions?typ=error&limit=20"
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "questions": [
+    {
+      "id": "2a814f8d-7bd6-4f19-8035-a5a622e11089",
+      "title": "求平行四边形面积，底6高4",
+      "userId": "test2",
+      "type": "error",
+      "status": "completed",
+      "concept": "平行四边形,面积,底×高",
+      "createdAt": "2026-03-13T12:46:30.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 4. 获取题目详情
+
+根据ID获取单个题目的详细信息。
+
+**接口**: `GET /external/questions/:id`
+
+**示例**:
+```bash
+curl "http://117.50.196.232:8002/external/questions/2a814f8d-7bd6-4f19-8035-a5a622e11089"
+```
+
+**响应**:
+```json
+{
+  "success": true,
+  "question": {
+    "id": "2a814f8d-7bd6-4f19-8035-a5a622e11089",
+    "title": "求平行四边形面积，底6高4",
+    "content": "求平行四边形面积，底6高4",
+    "userId": "test2",
+    "type": "error",
+    "status": "completed",
+    "concept": "平行四边形,面积,底×高",
+    "messages": [
+      { "id": "xxx", "type": "user", "content": "求平行四边形面积，底6高4" },
+      { "id": "xxx", "type": "agent", "content": "..." }
+    ],
+    "createdAt": "2026-03-13T12:46:30.000Z"
+  }
+}
+```
+
+---
+
+### 5. 健康检查
 
 **接口**: `GET /external/health`
 

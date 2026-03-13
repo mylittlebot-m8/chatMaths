@@ -1,12 +1,12 @@
 import { chat } from '@chat-tutor/db/schema'
 import { db } from '@chat-tutor/db'
-import { desc, eq, and } from 'drizzle-orm'
+import { desc, eq, and, sql } from 'drizzle-orm'
 import { ClientAction, ClientMessage, AgentClientMessage, Context, createMessageResolver, Page, Status, UserAction } from '@chat-tutor/shared'
 import { AgentProvider, createAgent, getTitle } from '@chat-tutor/agent'
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { ModelMessage } from 'ai'
 import { AgentConfigError, ChatIsRunningError } from './error'
-import { generateQuestionVectors } from '../../utils/embedding'
+import { generateQuestionVectors, generateEmbedding } from '../../utils/embedding'
 
 export const getChats = async (limit: number, offset: number, userId?: string, type?: string) => {
   try {
@@ -56,6 +56,8 @@ export const createChat = async (input: string, userId?: string, type?: string) 
     .returning({
       id: chat.id
     })
+  
+  // 异步生成标题
   getTitle({
     apiKey: process.env.MODEL_API_KEY!,
     baseURL: process.env.MODEL_BASE_URL!,
@@ -64,6 +66,17 @@ export const createChat = async (input: string, userId?: string, type?: string) 
   }, input).then(title => {
     updateChatTitle(id, title)
   })
+  
+  // 异步生成 text_embedding 向量 (仅文本)
+  console.log('[Vector] Generating vector for input:', input.substring(0, 20))
+  generateEmbedding(input).then(result => {
+    if (result.success && result.embedding) {
+      const vectorStr = '[' + result.embedding.join(',') + ']'
+      db.execute(sql`UPDATE chat SET text_embedding = ${vectorStr}::vector WHERE id = ${id}`)
+        .catch(err => console.error('[Vector] Failed to save vector:', err))
+    }
+  }).catch(err => console.error('[Vector] Failed to generate vector:', err))
+  
   return id
 }
 
@@ -406,25 +419,24 @@ export const createChatStream = () => {
           // 提取解题内容（去除 plan 标签）
           const solveContent = fullResponse.replace(/<plan>[\s\S]*?<\/plan>/g, '').trim()
           
-          // 如果有图片资源（多模态输入），生成向量
-          if (input.options.resources && input.options.resources.length > 0) {
-            try {
-              console.log('[Vector] Generating vectors for multimodal input...')
-              const vectors = await generateQuestionVectors(extractedProblem, solveContent)
-              console.log('[Vector] Vectors generated, concept:', vectors.concept)
-              
-              // 更新数据库
-              await db.update(chat).set({
-                text_embedding: vectors.textEmbedding ? JSON.stringify(vectors.textEmbedding) : null,
-                slove_embedding: vectors.solveEmbedding ? JSON.stringify(vectors.solveEmbedding) : null,
-                concept: vectors.concept,
-                concept_embedding: vectors.conceptEmbedding ? JSON.stringify(vectors.conceptEmbedding) : null,
-              }).where(eq(chat.id, id))
-              
-              console.log('[Vector] Vectors saved to database')
-            } catch (err) {
-              console.error('[Vector] Error generating vectors:', err)
-            }
+          // 解题完成后，用AI返回的准确题目和解答生成向量
+          // 这样比初始提交的关键词更准确
+          try {
+            console.log('[Vector] Generating vectors for multimodal input...')
+            const vectors = await generateQuestionVectors(extractedProblem, solveContent)
+            console.log('[Vector] Vectors generated, concept:', vectors.concept)
+            
+            // 更新数据库
+            await db.update(chat).set({
+              text_embedding: vectors.textEmbedding ? JSON.stringify(vectors.textEmbedding) : null,
+              slove_embedding: vectors.solveEmbedding ? JSON.stringify(vectors.solveEmbedding) : null,
+              concept: vectors.concept,
+              concept_embedding: vectors.conceptEmbedding ? JSON.stringify(vectors.conceptEmbedding) : null,
+            }).where(eq(chat.id, id))
+            
+            console.log('[Vector] Vectors saved to database')
+          } catch (err) {
+            console.error('[Vector] Error generating vectors:', err)
           }
 
           await updateChatRecord({

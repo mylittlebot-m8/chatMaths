@@ -1,6 +1,6 @@
 import { Elysia } from 'elysia'
 import { SubmitQuestionModel, GetQuestionsModel } from './model'
-import { submitQuestion, getExternalQuestions, getExternalQuestion } from './service'
+import { submitQuestion, getExternalQuestions, getExternalQuestion, searchQuestionsByVector, searchQuestionsByKeyword } from './service'
 
 export const external = new Elysia({ prefix: '/external' })
 
@@ -45,6 +45,29 @@ export const external = new Elysia({ prefix: '/external' })
     return { success: false, error: 'Question not found' }
   }
   return question
+})
+
+
+
+// 外部接口：搜索题目（支持关键词和向量）
+// 关键词搜索: /search?title=xxx
+// 向量搜索: /search?key=xxx (根据语义搜索)
+.get('/search', async ({ query }) => {
+  const { key, title, uuid, typ, limit } = query as any
+  
+  // 向量搜索
+  if (key) {
+    const results = await searchQuestionsByVector(key, uuid, typ, Number(limit) || 10)
+    return { success: true, type: 'vector', results }
+  }
+  
+  // 关键词搜索
+  if (title) {
+    const results = await searchQuestionsByKeyword(title, uuid, typ, Number(limit) || 10)
+    return { success: true, type: 'keyword', results }
+  }
+  
+  return { success: false, error: 'Missing key or title parameter' }
 })
 
 // 健康检查

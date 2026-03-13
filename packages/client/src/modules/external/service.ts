@@ -1,6 +1,7 @@
 import { chat } from '@chat-tutor/db/schema'
 import { db } from '@chat-tutor/db'
-import { eq } from 'drizzle-orm'
+import { eq, sql, and } from 'drizzle-orm'
+import { generateEmbedding as getEmbedding } from '../../utils/embedding'
 
 // 外部接口使用 ENV 中的配置
 const MODEL_API_KEY = process.env.MODEL_API_KEY || ''
@@ -71,9 +72,22 @@ async function processQuestionAsync(id: string, content: string, imageUrl?: stri
     // 更新状态为处理中
     await db.update(chat).set({ status: 'processing' }).where(eq(chat.id, id))
     
-    // 构建消息
+    // 构建消息 - 要求返回结构化内容
+    const systemPrompt = `你是一个专业的数学辅导老师。请按以下格式解答用户提交的题目：
+
+请先识别并提取题目中的数学问题，然后用<problem>标签包裹识别的题目内容，最后进行解答。
+
+输出格式：
+<problem>题目内容（精简描述）</problem>
+<solution>详细解答步骤</solution>
+
+注意：
+1. <problem>中只包含题目本身的关键信息，不要包含解答
+2. 用中文输出
+3. 如果是图片题，从图片中识别题目`
+
     const messages: any[] = [
-      { role: 'system', content: '你是一个专业的数学辅导老师。请解答用户提交的题目。' }
+      { role: 'system', content: systemPrompt }
     ]
     
     // 如果有图片，添加图片消息
@@ -82,14 +96,14 @@ async function processQuestionAsync(id: string, content: string, imageUrl?: stri
         role: 'user',
         content: [
           { type: 'text', text: content },
-          { type: 'image', image: imageUrl }
+          { type: 'image_url', image_url: { url: imageUrl } }
         ]
       })
     } else {
       messages.push({ role: 'user', content })
     }
     
-    // 调用大模型 - 使用 DashScope 格式
+    // 调用大模型
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -103,12 +117,30 @@ async function processQuestionAsync(id: string, content: string, imageUrl?: stri
       })
     })
     
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`)
+    const responseText = await response.text()
+    let data
+    try {
+      data = JSON.parse(responseText)
+    } catch (e) {
+      console.error('[External] Invalid JSON:', responseText.substring(0, 200))
+      await db.update(chat).set({ status: 'failed' }).where(eq(chat.id, id))
+      return
     }
     
-    const data = await response.json()
+    if (!response.ok) {
+      console.error('[External] API Error:', response.status, data)
+      await db.update(chat).set({ status: 'failed' }).where(eq(chat.id, id))
+      return
+    }
+    
     const answer = data.choices[0].message.content
+    
+    // 从答案中提取 <problem> 标签内容
+    const problemMatch = answer.match(/<problem>([\s\S]*?)<\/problem>/)
+    const extractedProblem = problemMatch ? problemMatch[1].trim() : content
+    
+    // 提取解题内容
+    const solveContent = answer.replace(/<problem>[\s\S]*?<\/problem>/g, '').trim()
     
     // 更新数据库
     const msgId1 = crypto.randomUUID()
@@ -121,7 +153,19 @@ async function processQuestionAsync(id: string, content: string, imageUrl?: stri
       ]
     }).where(eq(chat.id, id))
     
-    console.log('[External] Question processed:', id)
+    // 使用AI返回的准确题目生成向量
+    try {
+      const embedResult = await getEmbedding(extractedProblem + ' ' + solveContent.slice(0, 500))
+      if (embedResult.success && embedResult.embedding) {
+        const vectorStr = '[' + embedResult.embedding.join(',') + ']'
+        await db.execute(sql`UPDATE chat SET text_embedding = ${vectorStr}::vector WHERE id = ${id}`)
+        console.log('[External] Vector generated from extracted problem:', id)
+      }
+    } catch (e) {
+      console.error('[External] Failed to generate vector:', e)
+    }
+    
+    console.log('[External] Question processed:', id, 'imageUrl:', imageUrl)
   } catch (error) {
     console.error('[External] Error processing question:', error)
     await db.update(chat).set({ status: 'failed' }).where(eq(chat.id, id))
@@ -210,5 +254,86 @@ export const getExternalQuestion = async (id: string): Promise<QuestionRecord | 
   } catch (error) {
     console.error('Error getting external question:', error)
     return null
+  }
+}
+
+
+// 外部接口：向量搜索题目
+export const searchQuestionsByVector = async (
+  key: string,
+  uuid?: string,
+  typ?: string,
+  limit: number = 10
+) => {
+  try {
+    // 生成查询词的向量
+    console.log('[Vector Search] key:', key)
+    const embedResult = await getEmbedding(key)
+    console.log('[Vector Search] result:', embedResult)
+    if (!embedResult || !embedResult.success) {
+      throw new Error('Failed to generate embedding: ' + embedResult?.error)
+    }
+    const embedding = embedResult.embedding
+    console.log('[Vector Search] embedding length:', embedding?.length)
+    if (!embedding) {
+      throw new Error('Failed to generate embedding')
+    }
+    
+    // 构建向量数组字符串
+    const vectorStr = '[' + embedding.join(',') + ']'
+    
+    let sqlWhere = `text_embedding IS NOT NULL`
+    
+    if (uuid) {
+      sqlWhere += ` AND user_id = '${uuid}'`
+    }
+    if (typ) {
+      sqlWhere += ` AND type = '${typ}'`
+    }
+    
+    const sqlQuery = `
+      SELECT id, title, user_id, type, status, created_at,
+        1 - (text_embedding <=> '${vectorStr}'::vector) as similarity
+      FROM chat
+      WHERE ${sqlWhere}
+      ORDER BY text_embedding <=> '${vectorStr}'::vector
+      LIMIT ${limit}
+    `
+    
+    // @ts-ignore
+    const results = await db.execute(sqlQuery)
+    return results.rows as any[]
+  } catch (error) {
+    console.error('Error searching questions by vector:', error)
+    return []
+  }
+}
+
+// 外部接口：按标题/内容关键词搜索
+export const searchQuestionsByKeyword = async (
+  keyword: string,
+  uuid?: string,
+  typ?: string,
+  limit: number = 10
+) => {
+  try {
+    let sqlWhere = `title ILIKE '%${keyword}%'`
+    
+    if (uuid) {
+      sqlWhere += ` AND user_id = '${uuid}'`
+    }
+    if (typ) {
+      sqlWhere += ` AND type = '${typ}'`
+    }
+    
+    const sqlQuery = `SELECT id, title, user_id, type, status, created_at FROM chat WHERE ${sqlWhere} ORDER BY created_at DESC LIMIT ${limit}`
+    
+    // @ts-ignore
+    const results = await db.execute(sqlQuery)
+    
+    return results.rows as any[]
+  } catch (error) {
+    console.error('Error searching questions by keyword:', error)
+    return []
   }
 }
